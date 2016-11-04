@@ -10,7 +10,6 @@ class Preprocessor(object):
     TRAIN_DIR = '../dataset/train/'
     TEST_DIR = '../dataset/test/'
 
-
     @staticmethod
     def natural_key(string_):
         """
@@ -71,7 +70,7 @@ class Preprocessor(object):
         return img_pad
 
     @staticmethod
-    def get_dataset_paths(train_dir=TRAIN_DIR, test_dir=TEST_DIR, key=natural_key):
+    def get_dataset_paths(train_dir=TRAIN_DIR, test_dir=TEST_DIR, key=natural_key.__func__):
         train_cats = sorted(glob.glob(os.path.join(train_dir, 'cat*.jpg')), key=key)
         train_dogs = sorted(glob.glob(os.path.join(train_dir, 'dog*.jpg')), key=key)
         train_all = train_cats + train_dogs
@@ -79,3 +78,12 @@ class Preprocessor(object):
         test_all = sorted(glob.glob(os.path.join(test_dir, '*.jpg')), key=key)
         return train_cats, train_dogs, train_all, test_all
 
+    @staticmethod
+    def get_image(image_path):
+        return Image.open(image_path)
+
+    @staticmethod
+    def get_processed_image(image, size=224):
+        image_normalized = Preprocessor.norm_image(image)
+        image_resized = Preprocessor.resize_image(image_normalized, size)
+        return image_resized
