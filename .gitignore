@@ -91,3 +91,7 @@ ENV/
 # Datasets
 dataset
 *.csv
+
+# Pycharm
+.idea
+*.idea
