@@ -32,20 +32,17 @@ class Preprocessor(object):
         img_y_np /= 255
         img_y_np -= img_y_np.mean()
         img_y_np /= img_y_np.std()
-        scale = np.max([np.abs(np.percentile(img_y_np, 1.0)),
-                        np.abs(np.percentile(img_y_np, 99.0))])
-        img_y_np = img_y_np / scale
+        scale = np.max([np.abs(np.percentile(img_y_np, 1)), np.abs(np.percentile(img_y_np, 99))])
+
+        img_y_np /= scale
         img_y_np = np.clip(img_y_np, -1.0, 1.0)
         img_y_np = (img_y_np + 1.0) / 2.0
 
         img_y_np = (img_y_np * 255 + 0.5).astype(np.uint8)
-
         img_y = Image.fromarray(img_y_np)
-
         img_ybr = Image.merge('YCbCr', (img_y, img_b, img_r))
 
         img_nrm = img_ybr.convert('RGB')
-
         return img_nrm
 
     @staticmethod
@@ -74,12 +71,11 @@ class Preprocessor(object):
         return img_pad
 
     @staticmethod
-    def get_dataset_paths():
-        train_cats = sorted(glob.glob(os.path.join(Preprocessor.TRAIN_DIR, 'cat*.jpg')), key=Preprocessor.natural_key)
-        train_dogs = sorted(glob.glob(os.path.join(Preprocessor.TRAIN_DIR, 'dog*.jpg')), key=Preprocessor.natural_key)
+    def get_dataset_paths(train_dir=TRAIN_DIR, test_dir=TEST_DIR, key=natural_key):
+        train_cats = sorted(glob.glob(os.path.join(train_dir, 'cat*.jpg')), key=key)
+        train_dogs = sorted(glob.glob(os.path.join(train_dir, 'dog*.jpg')), key=key)
         train_all = train_cats + train_dogs
 
-        test_all = sorted(glob.glob(os.path.join(Preprocessor.TEST_DIR, '*.jpg')), key=Preprocessor.natural_key)
-
+        test_all = sorted(glob.glob(os.path.join(test_dir, '*.jpg')), key=key)
         return train_cats, train_dogs, train_all, test_all
 
