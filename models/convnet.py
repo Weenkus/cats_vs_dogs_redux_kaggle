@@ -31,7 +31,7 @@ def main():
     np.random.shuffle(train_all)
     np.random.shuffle(test_all)
 
-    labels = [[1., 0.] if 'dog' in name else [0., 1.] for name in train_all] # labels are one hot encoded
+    labels = [[1., 0.] if 'dog' in name else [0., 1.] for name in train_all]  # labels are one hot encoded
 
     dataset_size = 25000
     train = list(Pool(8).map(get_processed_image_from_path, train_all[:dataset_size]))
@@ -45,7 +45,7 @@ def main():
     convnet = TFConvNet(feature_number, class_num, False, size=image_size,  batch_size=64, step=5e-4)
 
     train_x, test_x, train_y, test_y = train_test_split(train, labels, test_size=0.3)
-    convnet.train(train_x, train_y, test_x, test_y, epochs=10000, keep_prob=0.5)
+    convnet.train(train_x, train_y, test_x, test_y, epochs=5000, keep_prob=0.6)
 
     test = list(Pool(8).map(get_processed_image_from_path, test_all))
     convnet.generate_submission(test)
@@ -53,7 +53,10 @@ def main():
 
 class TFConvNet(object):
     def __init__(self, feature_num, class_num, is_training, step=1e-4, size=64, batch_size=100):
-        self.weight_decay = 7.0
+        tf.set_random_seed(42)
+        random.seed(42)
+
+        self.weight_decay = 5e-2
         self.bn_params = {
             # Decay for the moving averages.
             'decay': 0.999,
@@ -78,8 +81,8 @@ class TFConvNet(object):
                 kernel_size=3, stride=1, padding='SAME', activation_fn=tf.nn.relu,
                 normalizer_fn=layers.batch_norm,
                 #normalizer_params=self.bn_params,
-                weights_initializer=layers.variance_scaling_initializer(),
-                weights_regularizer=layers.l2_regularizer(self.weight_decay)
+                #weights_initializer=layers.variance_scaling_initializer(),
+                #weights_regularizer=layers.l2_regularizer(self.weight_decay)
         ):
             self.X = tf.reshape(self.X, [-1, size, size, 3])
             self.keep_prob = tf.placeholder(tf.float32)
@@ -96,10 +99,15 @@ class TFConvNet(object):
             net = layers.convolution2d(net, num_outputs=32)
             net = layers.convolution2d(net, num_outputs=32)
             net = layers.max_pool2d(net, kernel_size=2)
-            net = layers.dropout(net, keep_prob=self.keep_prob)
             net = layers.relu(net, num_outputs=32)
 
-            net = layers.flatten(net, [-1, 8 * 8 * 32])
+            net = layers.convolution2d(net, num_outputs=64)
+            net = layers.convolution2d(net, num_outputs=64)
+            net = layers.max_pool2d(net, kernel_size=2)
+            net = layers.dropout(net, keep_prob=self.keep_prob)
+            net = layers.relu(net, num_outputs=64)
+
+            net = layers.flatten(net, [-1, 4 * 4 * 32])
             net = layers.fully_connected(net, num_outputs=64, activation_fn=tf.nn.relu)
             net = layers.dropout(net, keep_prob=self.keep_prob)
 
@@ -204,7 +212,7 @@ class TFConvNet(object):
                 break
 
             predict_batch = self.sess.run([predict], feed_dict={self.X: batch, self.keep_prob: 1.0})
-            predict_batch = map(lambda x: 1-x[0] if x[0] > x[1] else x[1], predict_batch[0])
+            predict_batch = map(lambda x: x[0] if x[0] > x[1] else 1-x[1], predict_batch[0])
             predictions.extend(list(predict_batch))
 
         print(len(test_x), len(predictions))
