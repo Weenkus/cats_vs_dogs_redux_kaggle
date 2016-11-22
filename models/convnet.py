@@ -18,6 +18,9 @@ tf.python.control_flow_ops = tf
 
 image_size = 64
 
+tf.set_random_seed(42)
+random.seed(42)
+
 
 def get_processed_image_from_path(path):
     image = Preprocessor.get_image(path)
@@ -45,7 +48,7 @@ def main():
     convnet = TFConvNet(feature_number, class_num, False, size=image_size,  batch_size=64, step=5e-4)
 
     train_x, test_x, train_y, test_y = train_test_split(train, labels, test_size=0.3)
-    convnet.train(train_x, train_y, test_x, test_y, epochs=5000, keep_prob=0.6)
+    convnet.train(train_x, train_y, test_x, test_y, epochs=100000, keep_prob=0.6, batch_test_size=1000)
 
     test = list(Pool(8).map(get_processed_image_from_path, test_all))
     convnet.generate_submission(test)
@@ -53,10 +56,7 @@ def main():
 
 class TFConvNet(object):
     def __init__(self, feature_num, class_num, is_training, step=1e-4, size=64, batch_size=100):
-        tf.set_random_seed(42)
-        random.seed(42)
-
-        self.weight_decay = 5e-2
+        self.weight_decay = 5.0
         self.bn_params = {
             # Decay for the moving averages.
             'decay': 0.999,
@@ -82,7 +82,7 @@ class TFConvNet(object):
                 normalizer_fn=layers.batch_norm,
                 #normalizer_params=self.bn_params,
                 #weights_initializer=layers.variance_scaling_initializer(),
-                #weights_regularizer=layers.l2_regularizer(self.weight_decay)
+                weights_regularizer=layers.l2_regularizer(self.weight_decay)
         ):
             self.X = tf.reshape(self.X, [-1, size, size, 3])
             self.keep_prob = tf.placeholder(tf.float32)
@@ -99,6 +99,7 @@ class TFConvNet(object):
             net = layers.convolution2d(net, num_outputs=32)
             net = layers.convolution2d(net, num_outputs=32)
             net = layers.max_pool2d(net, kernel_size=2)
+            net = layers.dropout(net, keep_prob=self.keep_prob)
             net = layers.relu(net, num_outputs=32)
 
             net = layers.convolution2d(net, num_outputs=64)
@@ -182,7 +183,7 @@ class TFConvNet(object):
                     random.shuffle(combined)
                     X_test[:], y_test[:] = zip(*combined)
 
-                if val_loss <= 0.4:
+                if val_loss <= 0.35:
                     print('Validation loss is great')
                     break
 
